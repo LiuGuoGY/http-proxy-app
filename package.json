@@ -14,7 +14,6 @@
   "engines": {
     "node": "^14.18.0 || >=16.0.0"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.9",
@@ -33,5 +32,10 @@
     "env": {
       "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777"
     }
+  },
+  "dependencies": {
+    "@electron/remote": "^2.0.9",
+    "antd": "^5.1.0",
+    "axios": "^0.27.2"
   }
 }

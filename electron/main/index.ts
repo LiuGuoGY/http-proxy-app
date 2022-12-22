@@ -33,9 +33,15 @@ const preload = join(__dirname, '../preload/index.js')
 const url = process.env.VITE_DEV_SERVER_URL
 const indexHtml = join(process.env.DIST, 'index.html')
 
+require('@electron/remote/main').initialize();
+
 async function createWindow() {
   win = new BrowserWindow({
     title: 'Main window',
+    width: 350,
+    height: 600,
+    resizable: false,
+    alwaysOnTop: true,
     icon: join(process.env.PUBLIC, 'favicon.svg'),
     webPreferences: {
       preload,
@@ -44,10 +50,12 @@ async function createWindow() {
     },
   })
 
+  require('@electron/remote/main').enable(win.webContents);
+
   if (process.env.VITE_DEV_SERVER_URL) { // electron-vite-vue#298
     win.loadURL(url)
     // Open devTool if the app is not packaged
-    win.webContents.openDevTools()
+    win.webContents.openDevTools({ mode: 'detach' })
   } else {
     win.loadFile(indexHtml)
   }
