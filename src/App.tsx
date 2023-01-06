@@ -1,6 +1,6 @@
 import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
-// const { net } = require('@electron/remote')
+const { clipboard  } = require('@electron/remote')
 import axios from 'axios';
 import { List, Tag, Button, message, Tooltip } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
@@ -26,11 +26,43 @@ const App: React.FC = () => {
   const [testLoading, setTestLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
 
+  //返回xxx.xxx.xxx.xxx:pppp的字符串数组
+  async function requestProxyip() {
+    const response = await axios({
+      url: `https://api.proxyip.info/api.php?key=6666&method=all`,
+      // url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+      method: 'get',
+      timeout: 5000,
+    });
+    console.log(response);
+    let data = response.data.split("\r\n");
+    // let data = response.data.split("\n");
+    if (data[0] === "Times used up") {
+      data = [];
+    } else {
+      data.pop();
+    }
+    return data;
+  }
+
+  async function requestGithubip() {
+    const response = await axios({
+      // url: `https://api.proxyip.info/api.php?key=6666&method=all`,
+      url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+      method: 'get',
+      timeout: 5000,
+    });
+    console.log(response);
+    // let data = response.data.split("\r\n");
+    let data = response.data.split("\n");
+    return data;
+  }
+
   async function getData() {
     try {
       const response = await axios({
-        // url: `https://api.proxyip.info/api.php?key=6666&method=all`,
-        url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+        url: `https://api.proxyip.info/api.php?key=6666&method=all`,
+        // url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
         proxy: {
@@ -39,8 +71,8 @@ const App: React.FC = () => {
         }
       });
       console.log(response);
-      // let data = response.data.split("\r\n");
-      let data = response.data.split("\n");
+      let data = response.data.split("\r\n");
+      // let data = response.data.split("\n");
       if (data[0] === "Times used up") {
         data = ["109.123.219.11:80", "109.194.101.128:3128", "111.21.183.58:9091", "182.92.75.205:60080", "166.104.231.44:8888", "72.170.220.17:8080"];
       } else {
@@ -69,6 +101,7 @@ const App: React.FC = () => {
     try {
       const response: any = await axios({
         url: 'http://www.google.com/generate_204',
+        // url: 'http://www.gstatic.com/generate_204',
         method: 'get',
         timeout: 5000,
         proxy: {
@@ -89,8 +122,9 @@ const App: React.FC = () => {
   }
 
   async function testLocal() {
-    let status = await testIp("127.0.0.1", 7890);
+    // let status = await testIp("127.0.0.1", 7890);
     // let status = await testIp("180.158.23.175", 3080);
+    let status = await testIp("176.192.70.58", 8016);
     console.log(status);
     if (status) {
       message.success('测试成功，ip有效！');
@@ -148,8 +182,9 @@ const App: React.FC = () => {
     setIpData(data);
   }
 
-  async function handleListItemClick() {
-
+  async function handleListItemClick(item:DataType) {
+    clipboard.writeText(item.ip + ":" + item.port);
+    message.success(item.ip + ":" + item.port + " 已复制");
   }
 
   return (
@@ -206,7 +241,7 @@ const App: React.FC = () => {
         dataSource={ipData}
         size="small"
         renderItem={(item: DataType) => (
-          <List.Item className={styles.list_item}>
+          <List.Item className={styles.list_item} onClick={()=>{handleListItemClick(item)}}>
             <div className={styles.list_item_content}>
               <div className={styles.list_state}>
                 <Tag color={item.stateColor}>{item.state}</Tag>
