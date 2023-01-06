@@ -1,3 +1,6 @@
+* {
+  user-select: none;
+}
 .app {
   text-align: center;
   .header {
@@ -26,13 +29,11 @@
       align-items: center;
       .list_state {
         width: 60px;
-        user-select: none;
       }
       .list_ip {
         font-size: 15px;
         // width: 200px;
         text-align: left;
-        user-select: none;
       }
     }
 
