@@ -2,11 +2,16 @@ import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
 // const { net } = require('@electron/remote')
 import axios from 'axios';
-import { List, Tag, Button } from "antd";
+import { List, Tag, Button, message, Tooltip } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
 
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
+message.config({
+  top: 480,
+  duration: 2,
+  maxCount: 1,
+});
 
 interface DataType {
   ip: string;
@@ -84,31 +89,38 @@ const App: React.FC = () => {
   }
 
   async function testLocal() {
-    // let status = await testIp("127.0.0.1", 7890);
-    let status = await testIp("180.158.23.175", 3080);
+    let status = await testIp("127.0.0.1", 7890);
+    // let status = await testIp("180.158.23.175", 3080);
     console.log(status);
+    if (status) {
+      message.success('测试成功，ip有效！');
+    } else {
+      message.error('测试失败，ip无效！');
+    }
   }
 
   async function testAllIps() {
     let data = ipData;
-    for (let i = 0; i < data.length; i++) {
-      data[i].state = "未知";
-      data[i].stateColor = "gray";
-    }
-    setIpData(data);
-    const shotNumber:number = 500;
+    let vaildNumber = 0;
+    // for (let i = 0; i < data.length; i++) {
+    //   data[i].state = "未知";
+    //   data[i].stateColor = "gray";
+    // }
+    // setIpData(data);
+    const shotNumber: number = 500;
     for (let y = 0; y < data.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
-        if(i >= data.length) break;
+        if (i >= data.length) break;
         promiseArray.push(testIp(data[i].ip, Number(data[i].port)));
       }
       let resArr = await Promise.all(promiseArray);
-      for (let i = y, z = 0; i < y + resArr.length; i++,z++) {
+      for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
         // console.log("i:" + i + " y:" + y);
         if (resArr[z]) {
           data[i].state = "有效";
           data[i].stateColor = "green";
+          vaildNumber++;
         } else {
           data[i].state = "无效";
           data[i].stateColor = "red";
@@ -117,12 +129,17 @@ const App: React.FC = () => {
       setIpData(data);
     }
     await sortIpData();
+    if (vaildNumber <= 0) {
+      message.error('无有效节点');
+    } else {
+      message.success('有' + vaildNumber + "个有效节点");
+    }
   }
 
   async function sortIpData() {
     let data = ipData;
-    data.sort((x, y)=>{
-      if(x.state === "有效") {
+    data.sort((x, y) => {
+      if (x.state === "有效") {
         return -1;
       } else {
         return 0;
@@ -131,45 +148,58 @@ const App: React.FC = () => {
     setIpData(data);
   }
 
+  async function handleListItemClick() {
+
+  }
+
   return (
     <div className={styles.app}>
       <div className={styles.header}>
-        <Button
-          className={styles.refresh_button}
-          type="primary"
-          shape="circle"
-          icon={<ReloadOutlined />}
-          loading={refreshLoading}
-          onClick={async () => {
-            setRefreshLoading(true);
-            await getData();
-            setRefreshLoading(false);
-          }}
-        />
-        <Button
-          className={styles.test_button}
-          type="primary"
-          shape="circle"
-          icon={<CheckCircleOutlined />}
-          loading={testLoading}
-          onClick={async () => {
-            setTestLoading(true);
-            await testAllIps();
-            setTestLoading(false);
-          }}
-        />
-        <Button
-          className={styles.debug_button}
-          type="primary"
-          shape="circle"
-          icon={<BugOutlined />}
-          loading={debugLoading}
-          onClick={async () => {
-            setDebugLoading(true);
-            await testLocal();
-            setDebugLoading(false);
-          }}
-        />
+        <Tooltip placement="bottom" title="获取节点列表">
+          <Button
+            className={styles.refresh_button}
+            type="primary"
+            shape="circle"
+            icon={<ReloadOutlined />}
+            loading={refreshLoading}
+            onClick={async () => {
+              setRefreshLoading(true);
+              await getData();
+              setRefreshLoading(false);
+            }}
+          />
+        </Tooltip>
+
+        <Tooltip placement="bottom" title="检查所有节点">
+          <Button
+            className={styles.test_button}
+            type="primary"
+            shape="circle"
+            icon={<CheckCircleOutlined />}
+            loading={testLoading}
+            onClick={async () => {
+              setTestLoading(true);
+              await testAllIps();
+              setTestLoading(false);
+            }}
+          />
+        </Tooltip>
+
+        <Tooltip placement="bottom" title="本地测试">
+          <Button
+            className={styles.debug_button}
+            type="primary"
+            shape="circle"
+            icon={<BugOutlined />}
+            loading={debugLoading}
+            onClick={async () => {
+              setDebugLoading(true);
+              await testLocal();
+              setDebugLoading(false);
+            }}
+          />
+        </Tooltip>
+
       </div>
       <List
         itemLayout="horizontal"
