@@ -1,6 +1,6 @@
 import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
-const { clipboard  } = require('@electron/remote')
+const { clipboard } = require('@electron/remote')
 import axios from 'axios';
 import { List, Tag, Button, message, Tooltip } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
@@ -28,41 +28,33 @@ const App: React.FC = () => {
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
-    const response = await axios({
-      url: `https://api.proxyip.info/api.php?key=6666&method=all`,
-      // url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
-      method: 'get',
-      timeout: 5000,
-    });
-    console.log(response);
-    let data = response.data.split("\r\n");
-    // let data = response.data.split("\n");
-    if (data[0] === "Times used up") {
-      data = [];
-    } else {
-      data.pop();
-    }
-    return data;
-  }
-
-  async function requestGithubip() {
-    const response = await axios({
-      // url: `https://api.proxyip.info/api.php?key=6666&method=all`,
-      url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
-      method: 'get',
-      timeout: 5000,
-    });
-    console.log(response);
-    // let data = response.data.split("\r\n");
-    let data = response.data.split("\n");
-    return data;
-  }
-
-  async function getData() {
     try {
       const response = await axios({
         url: `https://api.proxyip.info/api.php?key=6666&method=all`,
         // url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+        method: 'get',
+        timeout: 5000,
+      });
+      console.log(response);
+      let data = response.data.split("\r\n");
+      // let data = response.data.split("\n");
+      if (data[0] === "Times used up") {
+        data = [];
+      } else {
+        data.pop();
+      }
+      return data;
+    } catch (err) {
+      console.log(err);
+      return [];
+    }
+  }
+
+  async function requestGithubip() {
+    try {
+      const response = await axios({
+        // url: `https://api.proxyip.info/api.php?key=6666&method=all`,
+        url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
         proxy: {
@@ -71,30 +63,38 @@ const App: React.FC = () => {
         }
       });
       console.log(response);
-      let data = response.data.split("\r\n");
-      // let data = response.data.split("\n");
-      if (data[0] === "Times used up") {
-        data = ["109.123.219.11:80", "109.194.101.128:3128", "111.21.183.58:9091", "182.92.75.205:60080", "166.104.231.44:8888", "72.170.220.17:8080"];
-      } else {
-        data.pop();
-      }
-      let dataArray: Array<DataType> = [];
-      for (let i = 0; i < data.length; i++) {
-        let ipInfo = data[i].split(":");
-        dataArray.push({
-          ip: ipInfo[0],
-          state: "未知",
-          stateColor: "gray",
-          port: ipInfo[1],
-        })
-      }
-      setIpData(dataArray);
-      console.log(dataArray);
+      // let data = response.data.split("\r\n");
+      let data = response.data.split("\n");
+      return data;
     } catch (err) {
       console.log(err);
+      return [];
     }
+  }
 
-
+  async function getData() {
+    let promiseArray = [];
+    let data: Array<string> = [];
+    promiseArray.push(requestProxyip());
+    promiseArray.push(requestGithubip());
+    let resArr = await Promise.all(promiseArray);
+    for(let i = 0; i < resArr.length; i++) {
+      data = data.concat(resArr[i]);
+    }
+    console.log(data);
+    let dataArray: Array<DataType> = [];
+    for (let i = 0; i < data.length; i++) {
+      let ipInfo = data[i].split(":");
+      dataArray.push({
+        ip: ipInfo[0],
+        state: "未知",
+        stateColor: "gray",
+        port: ipInfo[1],
+      })
+    }
+    setIpData(dataArray);
+    console.log(dataArray);
+    message.success('共获取到' + data.length + "个节点");
   }
 
   async function testIp(ip: string, port: number) {
@@ -166,7 +166,7 @@ const App: React.FC = () => {
     if (vaildNumber <= 0) {
       message.error('无有效节点');
     } else {
-      message.success('有' + vaildNumber + "个有效节点");
+      message.success('共检出' + vaildNumber + "个有效节点");
     }
   }
 
@@ -182,7 +182,7 @@ const App: React.FC = () => {
     setIpData(data);
   }
 
-  async function handleListItemClick(item:DataType) {
+  async function handleListItemClick(item: DataType) {
     clipboard.writeText(item.ip + ":" + item.port);
     message.success(item.ip + ":" + item.port + " 已复制");
   }
@@ -241,7 +241,7 @@ const App: React.FC = () => {
         dataSource={ipData}
         size="small"
         renderItem={(item: DataType) => (
-          <List.Item className={styles.list_item} onClick={()=>{handleListItemClick(item)}}>
+          <List.Item className={styles.list_item} onClick={() => { handleListItemClick(item) }}>
             <div className={styles.list_item_content}>
               <div className={styles.list_state}>
                 <Tag color={item.stateColor}>{item.state}</Tag>
