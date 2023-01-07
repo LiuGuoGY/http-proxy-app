@@ -133,7 +133,7 @@ const App: React.FC = () => {
   }
 
   async function testAllIps() {
-    let data = ipData;
+    let [...data] = ipData; //深拷贝
     let vaildNumber = 0;
     // for (let i = 0; i < data.length; i++) {
     //   data[i].state = "未知";
