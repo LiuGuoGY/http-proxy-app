@@ -2,7 +2,7 @@ import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
 const { clipboard } = require('@electron/remote')
 import axios from 'axios';
-import { List, Tag, Button, message, Tooltip } from "antd";
+import { List, Tag, Button, message, Tooltip, Switch } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
 
 //使用nodejs环境
@@ -18,13 +18,15 @@ interface DataType {
   state: string;
   stateColor: string;
   port: string;
+  con: number;  //连通率
 }
 
 const App: React.FC = () => {
   const [ipData, setIpData] = useState<DataType[]>([]);
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
-  const [testLoading, setTestLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
+  const [listen, setListen] = useState<boolean>(false);
+  const [timer, setTimer] = useState<NodeJS.Timer>();
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -57,10 +59,6 @@ const App: React.FC = () => {
         url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
-        proxy: {
-          host: "127.0.0.1",
-          port: 7890
-        }
       });
       console.log(response);
       // let data = response.data.split("\r\n");
@@ -78,7 +76,7 @@ const App: React.FC = () => {
     promiseArray.push(requestProxyip());
     promiseArray.push(requestGithubip());
     let resArr = await Promise.all(promiseArray);
-    for(let i = 0; i < resArr.length; i++) {
+    for (let i = 0; i < resArr.length; i++) {
       data = data.concat(resArr[i]);
     }
     console.log(data);
@@ -90,6 +88,7 @@ const App: React.FC = () => {
         state: "未知",
         stateColor: "gray",
         port: ipInfo[1],
+        con: 0
       })
     }
     setIpData(dataArray);
@@ -141,7 +140,7 @@ const App: React.FC = () => {
     //   data[i].stateColor = "gray";
     // }
     // setIpData(data);
-    const shotNumber: number = 500;
+    const shotNumber: number = data.length; //单次扫描的数量
     for (let y = 0; y < data.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
@@ -160,18 +159,8 @@ const App: React.FC = () => {
           data[i].stateColor = "red";
         }
       }
-      setIpData(data);
+      // setIpData(data);
     }
-    await sortIpData();
-    if (vaildNumber <= 0) {
-      message.error('无有效节点');
-    } else {
-      message.success('共检出' + vaildNumber + "个有效节点");
-    }
-  }
-
-  async function sortIpData() {
-    let data = ipData;
     data.sort((x, y) => {
       if (x.state === "有效") {
         return -1;
@@ -180,11 +169,29 @@ const App: React.FC = () => {
       }
     });
     setIpData(data);
+    if (vaildNumber <= 0) {
+      message.error('无有效节点');
+    } else {
+      message.success('共检出' + vaildNumber + "个有效节点");
+    }
   }
 
   async function handleListItemClick(item: DataType) {
     clipboard.writeText(item.ip + ":" + item.port);
     message.success(item.ip + ":" + item.port + " 已复制");
+  }
+
+  async function handleListenButtonClick() {
+    if(!listen) {
+      setListen(true);
+      testAllIps();
+      setTimer(setInterval(testAllIps, 20000)); //20秒一次
+      message.info("持续监测已打开");
+    } else {
+      setListen(false);
+      clearInterval(timer);
+      message.info("持续监测已关闭");
+    }
   }
 
   return (
@@ -205,18 +212,14 @@ const App: React.FC = () => {
           />
         </Tooltip>
 
-        <Tooltip placement="bottom" title="检查所有节点">
+        <Tooltip placement="bottom" title="持续监测所有节点">
           <Button
             className={styles.test_button}
             type="primary"
             shape="circle"
             icon={<CheckCircleOutlined />}
-            loading={testLoading}
-            onClick={async () => {
-              setTestLoading(true);
-              await testAllIps();
-              setTestLoading(false);
-            }}
+            style={{background: (listen)?"green":"gray"}}
+            onClick={() => { handleListenButtonClick() }}
           />
         </Tooltip>
 
