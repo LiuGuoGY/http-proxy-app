@@ -1,10 +1,10 @@
 {
-  "name": "electron-vite-react",
-  "productName": "Electron",
+  "name": "http-proxy-app",
+  "productName": "http-proxy-app",
   "private": true,
-  "version": "2.1.0",
-  "description": "Vite React Electron boilerplate.",
-  "author": "草鞋没号 <308487730@qq.com>",
+  "version": "1.0.0",
+  "description": "http proxy app",
+  "author": "Linger",
   "license": "MIT",
   "main": "dist-electron/electron/main/index.js",
   "scripts": {

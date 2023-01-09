@@ -2,11 +2,12 @@ import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
 const { clipboard } = require('@electron/remote')
 import axios from 'axios';
-import { List, Tag, Button, message, Tooltip, Progress } from "antd";
+import { List, Tag, Button, message, Tooltip, Progress, Checkbox  } from "antd";
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined, PauseOutlined, CaretRightOutlined } from '@ant-design/icons';
 const osProxy = require('cross-os-proxy');
 
-let scanTimes:number = 0;
+let scanTimes: number = 0;
 
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
@@ -17,12 +18,14 @@ message.config({
 });
 
 interface DataType {
+  idx: number;      //唯一序号
   ip: string;
   state: string;
   stateColor: string;
   port: string;
   conTimes: number;  //连通次数
   conRate: number;    //连通率 百分制
+  select: boolean,
 }
 
 const App: React.FC = () => {
@@ -99,6 +102,8 @@ const App: React.FC = () => {
         port: ipInfo[1],
         conTimes: 0,
         conRate: 0,
+        select: false,
+        idx: i,
       })
     }
     setIpData(dataArray);
@@ -164,7 +169,7 @@ const App: React.FC = () => {
           data[i].state = "有效";
           data[i].stateColor = "green";
           vaildNumber++;
-          data[i].conTimes ++;
+          data[i].conTimes++;
         } else {
           data[i].state = "无效";
           data[i].stateColor = "red";
@@ -188,31 +193,60 @@ const App: React.FC = () => {
   }
 
   async function handleListenButtonClick() {
-    if(!listen) {
-      setListen(true);
-      // scanTimes = 0;
-      testAllIps();
-      setTimer(setInterval(testAllIps, 20000)); //20秒一次
-      message.info("持续监测已打开");
+    if(ipData.length <= 0) {
+      message.error("请先点击左侧获取节点按钮");
     } else {
-      setListen(false);
-      clearInterval(timer);
-      message.info("持续监测已关闭");
+      if (!listen) {
+        setListen(true);
+        // scanTimes = 0;
+        testAllIps();
+        setTimer(setInterval(testAllIps, 30000)); //20秒一次
+        message.info("持续监测已打开");
+      } else {
+        setListen(false);
+        clearInterval(timer);
+        message.info("持续监测已关闭");
+      }
     }
   }
 
   async function handleProxyButtonClick() {
-    setProxyLoading(true);
-    if(!sysProxy) {
-      await osProxy.setProxy('221.225.184.86', 3128);
-      message.success("系统代理已打开");
-      setSysProxy(true);
-    } else {
-      await osProxy.closeProxy();
-      message.info("系统代理已关闭");
-      setSysProxy(false);
+    let haveSelected = false;
+    let idx = -1;
+    for(let i = 0; i < ipData.length; i++) {
+      if(ipData[i].select) {
+        haveSelected = true;
+        idx = i;
+      }
     }
-    setProxyLoading(false);
+    if(haveSelected) {
+      setProxyLoading(true);
+      if (!sysProxy) {
+        console.log("ip: " + ipData[idx].ip + " port: " + ipData[idx].port);
+        await osProxy.setProxy(ipData[idx].ip, ipData[idx].port);
+        message.success("系统代理已打开");
+        setSysProxy(true);
+      } else {
+        await osProxy.closeProxy();
+        message.info("系统代理已关闭");
+        setSysProxy(false);
+      }
+      setProxyLoading(false);
+    } else {
+      message.error("请勾选列表中的节点");
+    }
+  }
+
+  async function onProxySelectChange(id: number, e: CheckboxChangeEvent) {
+    let [...data] = ipData; //深拷贝
+    for(let i = 0; i < data.length; i++) {
+      if(data[i].idx == id) {
+        data[i].select = e.target.checked;
+      } else {
+        data[i].select = false;
+      }
+    }
+    setIpData(data);
   }
 
   return (
@@ -241,12 +275,12 @@ const App: React.FC = () => {
             shape="circle"
             icon={<CheckCircleOutlined />}
             loading={scanLoading}
-            style={{background: (listen)?"green":"gray"}}
+            style={{ background: (listen) ? "green" : "gray" }}
             onClick={() => { handleListenButtonClick() }}
           />
         </Tooltip>
 
-        <Tooltip placement="bottom" title="本地测试">
+        {/* <Tooltip placement="bottom" title="本地测试">
           <Button
             className={styles.debug_button}
             type="primary"
@@ -259,7 +293,7 @@ const App: React.FC = () => {
               setDebugLoading(false);
             }}
           />
-        </Tooltip>
+        </Tooltip> */}
 
         <div className={styles.header_right}>
           <Tooltip placement="bottom" title="系统代理开关">
@@ -268,9 +302,9 @@ const App: React.FC = () => {
               type="primary"
               shape="circle"
               // icon={<PauseOutlined />}
-              icon={(sysProxy)?<PauseOutlined />:<CaretRightOutlined />}
+              icon={(sysProxy) ? <PauseOutlined /> : <CaretRightOutlined />}
               loading={proxyLoading}
-              style={{background: (sysProxy)?"red":"gray"}}
+              style={{ background: (sysProxy) ? "red" : "gray" }}
               onClick={async () => { handleProxyButtonClick() }}
             />
           </Tooltip>
@@ -282,12 +316,15 @@ const App: React.FC = () => {
         dataSource={ipData}
         size="small"
         renderItem={(item: DataType) => (
-          <List.Item className={styles.list_item} onClick={() => { handleListItemClick(item) }}>
+          <List.Item className={styles.list_item}>
             <div className={styles.list_item_content}>
               <div className={styles.list_state}>
-                <Progress className={styles.list_progress} type="circle" percent={item.conRate} width={20} format={(percent) => `连通率：${percent}%`}/>
+                <Progress className={styles.list_progress} type="circle" percent={item.conRate} width={20} format={(percent) => `连通率：${percent}%`} />
               </div>
-              <p className={styles.list_ip}>{item.ip + ":" + item.port}</p>
+              <p className={styles.list_ip} onClick={() => { handleListItemClick(item) }}>{item.ip + ":" + item.port}</p>
+              <div className={styles.list_item_right}>
+                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e)=>{onProxySelectChange(item.idx, e)}}></Checkbox>
+              </div>
             </div>
           </List.Item>
         )}
