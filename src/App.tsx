@@ -5,6 +5,8 @@ import axios from 'axios';
 import { List, Tag, Button, message, Tooltip, Progress } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
 
+let scanTimes:number = 0;
+
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
 message.config({
@@ -30,7 +32,6 @@ const App: React.FC = () => {
   const [listen, setListen] = useState<boolean>(false);
   // const [scanTimes, setScanTimes] = useState<number>(0);
   const [timer, setTimer] = useState<NodeJS.Timer>();
-  let scanTimes:number = 0;
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -170,8 +171,9 @@ const App: React.FC = () => {
       return y.conRate - x.conRate;
     });
     setIpData(data);
+    console.log(data);
     setScanLoading(false);
-    console.log('共检出' + vaildNumber + "个有效节点")
+    console.log('共检出' + vaildNumber + "个有效节点");
   }
 
   async function handleListItemClick(item: DataType) {
@@ -205,6 +207,7 @@ const App: React.FC = () => {
             loading={refreshLoading}
             onClick={async () => {
               setRefreshLoading(true);
+              scanTimes = 0;
               await getData();
               setRefreshLoading(false);
             }}
