@@ -27,8 +27,9 @@ const App: React.FC = () => {
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
-  const [scanTimes, setScanTimes] = useState<number>(0);
+  // const [scanTimes, setScanTimes] = useState<number>(0);
   const [timer, setTimer] = useState<NodeJS.Timer>();
+  let scanTimes:number = 0;
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -140,8 +141,7 @@ const App: React.FC = () => {
     let [...data] = ipData; //深拷贝
     let vaildNumber = 0;
     const shotNumber: number = data.length; //单次扫描的数量
-    const nowSacnTimes = scanTimes + 1;
-    console.log(nowSacnTimes);
+    scanTimes++;
     for (let y = 0; y < data.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
@@ -160,7 +160,7 @@ const App: React.FC = () => {
           data[i].state = "无效";
           data[i].stateColor = "red";
         }
-        data[i].conRate = Math.round(data[i].conTimes / nowSacnTimes * 100);
+        data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
       }
       // setIpData(data);
     }
@@ -168,12 +168,7 @@ const App: React.FC = () => {
       return y.conRate - x.conRate;
     });
     setIpData(data);
-    setScanTimes(()=>{return nowSacnTimes; });
-    if (vaildNumber <= 0) {
-      message.error('无有效节点');
-    } else {
-      message.success('共检出' + vaildNumber + "个有效节点");
-    }
+    console.log('共检出' + vaildNumber + "个有效节点")
   }
 
   async function handleListItemClick(item: DataType) {
@@ -184,7 +179,7 @@ const App: React.FC = () => {
   async function handleListenButtonClick() {
     if(!listen) {
       setListen(true);
-      setScanTimes(()=>{ return 0; });
+      scanTimes = 0;
       testAllIps();
       setTimer(setInterval(testAllIps, 20000)); //20秒一次
       message.info("持续监测已打开");
@@ -248,7 +243,7 @@ const App: React.FC = () => {
           <List.Item className={styles.list_item} onClick={() => { handleListItemClick(item) }}>
             <div className={styles.list_item_content}>
               <div className={styles.list_state}>
-                <Progress className={styles.list_progress} type="circle" percent={item.conRate} width={20}/>
+                <Progress className={styles.list_progress} type="circle" percent={item.conRate} width={20} format={(percent) => `连通率：${percent}%`}/>
               </div>
               <p className={styles.list_ip}>{item.ip + ":" + item.port}</p>
             </div>
