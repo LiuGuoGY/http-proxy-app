@@ -2,8 +2,8 @@
  * @see https://www.electron.build/configuration/configuration
  */
 {
-  appId: "YourAppID",
-  productName: "YourAppName",
+  appId: "com.linger.httpproxyapp",
+  productName: "Http Proxy App",
   copyright: "Copyright © 2022 ${author}",
   asar: true,
   directories: {
