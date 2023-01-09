@@ -25,6 +25,7 @@ interface DataType {
 const App: React.FC = () => {
   const [ipData, setIpData] = useState<DataType[]>([]);
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
+  const [scanLoading, setScanLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
   // const [scanTimes, setScanTimes] = useState<number>(0);
@@ -142,6 +143,7 @@ const App: React.FC = () => {
     let vaildNumber = 0;
     const shotNumber: number = data.length; //单次扫描的数量
     scanTimes++;
+    setScanLoading(true);
     for (let y = 0; y < data.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
@@ -168,6 +170,7 @@ const App: React.FC = () => {
       return y.conRate - x.conRate;
     });
     setIpData(data);
+    setScanLoading(false);
     console.log('共检出' + vaildNumber + "个有效节点")
   }
 
@@ -179,7 +182,7 @@ const App: React.FC = () => {
   async function handleListenButtonClick() {
     if(!listen) {
       setListen(true);
-      scanTimes = 0;
+      // scanTimes = 0;
       testAllIps();
       setTimer(setInterval(testAllIps, 20000)); //20秒一次
       message.info("持续监测已打开");
@@ -214,6 +217,7 @@ const App: React.FC = () => {
             type="primary"
             shape="circle"
             icon={<CheckCircleOutlined />}
+            loading={scanLoading}
             style={{background: (listen)?"green":"gray"}}
             onClick={() => { handleListenButtonClick() }}
           />
