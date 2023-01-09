@@ -27,11 +27,16 @@
       flex-direction: row;
       align-items: center;
       .list_state {
-        width: 60px;
+        width: 40px;
+        display: flex;
+        flex-direction: row;
+        .list_progress {
+          margin-left: 10px;
+        }
       }
       .list_ip {
         font-size: 15px;
-        // width: 200px;
+        width: 160px;
         text-align: left;
       }
     }

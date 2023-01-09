@@ -2,7 +2,7 @@ import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
 const { clipboard } = require('@electron/remote')
 import axios from 'axios';
-import { List, Tag, Button, message, Tooltip, Switch } from "antd";
+import { List, Tag, Button, message, Tooltip, Progress } from "antd";
 import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
 
 //使用nodejs环境
@@ -18,7 +18,8 @@ interface DataType {
   state: string;
   stateColor: string;
   port: string;
-  con: number;  //连通率
+  conTimes: number;  //连通次数
+  conRate: number;    //连通率 百分制
 }
 
 const App: React.FC = () => {
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
+  const [scanTimes, setScanTimes] = useState<number>(0);
   const [timer, setTimer] = useState<NodeJS.Timer>();
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
@@ -33,13 +35,11 @@ const App: React.FC = () => {
     try {
       const response = await axios({
         url: `https://api.proxyip.info/api.php?key=6666&method=all`,
-        // url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
       });
       console.log(response);
       let data = response.data.split("\r\n");
-      // let data = response.data.split("\n");
       if (data[0] === "Times used up") {
         data = [];
       } else {
@@ -55,14 +55,17 @@ const App: React.FC = () => {
   async function requestGithubip() {
     try {
       const response = await axios({
-        // url: `https://api.proxyip.info/api.php?key=6666&method=all`,
         url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
+        // proxy: {
+        //   host: "127.0.0.1",
+        //   port: 7890
+        // }
       });
       console.log(response);
-      // let data = response.data.split("\r\n");
       let data = response.data.split("\n");
+      data.pop();
       return data;
     } catch (err) {
       console.log(err);
@@ -88,7 +91,8 @@ const App: React.FC = () => {
         state: "未知",
         stateColor: "gray",
         port: ipInfo[1],
-        con: 0
+        conTimes: 0,
+        conRate: 0,
       })
     }
     setIpData(dataArray);
@@ -135,12 +139,9 @@ const App: React.FC = () => {
   async function testAllIps() {
     let [...data] = ipData; //深拷贝
     let vaildNumber = 0;
-    // for (let i = 0; i < data.length; i++) {
-    //   data[i].state = "未知";
-    //   data[i].stateColor = "gray";
-    // }
-    // setIpData(data);
     const shotNumber: number = data.length; //单次扫描的数量
+    const nowSacnTimes = scanTimes + 1;
+    console.log(nowSacnTimes);
     for (let y = 0; y < data.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
@@ -154,21 +155,20 @@ const App: React.FC = () => {
           data[i].state = "有效";
           data[i].stateColor = "green";
           vaildNumber++;
+          data[i].conTimes ++;
         } else {
           data[i].state = "无效";
           data[i].stateColor = "red";
         }
+        data[i].conRate = Math.round(data[i].conTimes / nowSacnTimes * 100);
       }
       // setIpData(data);
     }
     data.sort((x, y) => {
-      if (x.state === "有效") {
-        return -1;
-      } else {
-        return 0;
-      }
+      return y.conRate - x.conRate;
     });
     setIpData(data);
+    setScanTimes(()=>{return nowSacnTimes; });
     if (vaildNumber <= 0) {
       message.error('无有效节点');
     } else {
@@ -184,6 +184,7 @@ const App: React.FC = () => {
   async function handleListenButtonClick() {
     if(!listen) {
       setListen(true);
+      setScanTimes(()=>{ return 0; });
       testAllIps();
       setTimer(setInterval(testAllIps, 20000)); //20秒一次
       message.info("持续监测已打开");
@@ -247,7 +248,7 @@ const App: React.FC = () => {
           <List.Item className={styles.list_item} onClick={() => { handleListItemClick(item) }}>
             <div className={styles.list_item_content}>
               <div className={styles.list_state}>
-                <Tag color={item.stateColor}>{item.state}</Tag>
+                <Progress className={styles.list_progress} type="circle" percent={item.conRate} width={20}/>
               </div>
               <p className={styles.list_ip}>{item.ip + ":" + item.port}</p>
             </div>
