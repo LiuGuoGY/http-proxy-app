@@ -2,9 +2,9 @@ import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
 const { clipboard } = require('@electron/remote')
 import axios from 'axios';
-import { List, Tag, Button, message, Tooltip, Progress, Checkbox  } from "antd";
+import { List, Tag, Button, message, Tooltip, Progress, Checkbox, Modal } from "antd";
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
-import { ReloadOutlined, CheckCircleOutlined, BugOutlined, PauseOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { ReloadOutlined, CheckOutlined, BugOutlined, PauseOutlined, CaretRightOutlined } from '@ant-design/icons';
 const osProxy = require('cross-os-proxy');
 
 let scanTimes: number = 0;
@@ -221,16 +221,24 @@ const App: React.FC = () => {
     }
     if(haveSelected) {
       setProxyLoading(true);
-      if (!sysProxy) {
-        console.log("ip: " + ipData[idx].ip + " port: " + ipData[idx].port);
-        await osProxy.setProxy(ipData[idx].ip, ipData[idx].port);
-        message.success("系统代理已打开");
-        setSysProxy(true);
-      } else {
-        await osProxy.closeProxy();
-        message.info("系统代理已关闭");
-        setSysProxy(false);
+      try {
+        if (!sysProxy) {
+          console.log("ip: " + ipData[idx].ip + " port: " + ipData[idx].port);
+          await osProxy.setProxy(ipData[idx].ip, ipData[idx].port);
+          message.success("系统代理已打开");
+          setSysProxy(true);
+        } else {
+          await osProxy.closeProxy();
+          message.info("系统代理已关闭");
+          setSysProxy(false);
+        }
+      } catch(e) {
+        Modal.error({
+          title: '出错了',
+          content: "" + e,
+        });
       }
+
       setProxyLoading(false);
     } else {
       message.error("请勾选列表中的节点");
@@ -273,7 +281,7 @@ const App: React.FC = () => {
             className={styles.test_button}
             type="primary"
             shape="circle"
-            icon={<CheckCircleOutlined />}
+            icon={<CheckOutlined />}
             loading={scanLoading}
             style={{ background: (listen) ? "green" : "gray" }}
             onClick={() => { handleListenButtonClick() }}
@@ -296,7 +304,7 @@ const App: React.FC = () => {
         </Tooltip> */}
 
         <div className={styles.header_right}>
-          <Tooltip placement="bottom" title="系统代理开关">
+          <Tooltip placement="bottom" title={(sysProxy?"系统代理已打开":"系统代理已关闭")}>
             <Button
               className={styles.proxy_button}
               type="primary"
