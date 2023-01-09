@@ -3,7 +3,8 @@ import styles from 'styles/app.module.scss';
 const { clipboard } = require('@electron/remote')
 import axios from 'axios';
 import { List, Tag, Button, message, Tooltip, Progress } from "antd";
-import { ReloadOutlined, CheckCircleOutlined, BugOutlined } from '@ant-design/icons';
+import { ReloadOutlined, CheckCircleOutlined, BugOutlined, PauseOutlined, CaretRightOutlined } from '@ant-design/icons';
+const osProxy = require('cross-os-proxy');
 
 let scanTimes:number = 0;
 
@@ -30,8 +31,10 @@ const App: React.FC = () => {
   const [scanLoading, setScanLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
-  // const [scanTimes, setScanTimes] = useState<number>(0);
+  const [sysProxy, setSysProxy] = useState<boolean>(false);
+  const [proxyLoading, setProxyLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<NodeJS.Timer>();
+
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -130,13 +133,16 @@ const App: React.FC = () => {
   async function testLocal() {
     // let status = await testIp("127.0.0.1", 7890);
     // let status = await testIp("180.158.23.175", 3080);
-    let status = await testIp("176.192.70.58", 8016);
-    console.log(status);
-    if (status) {
-      message.success('测试成功，ip有效！');
-    } else {
-      message.error('测试失败，ip无效！');
-    }
+    // let status = await testIp("176.192.70.58", 8016);
+    // await osProxy.setProxy('221.225.184.86', 3128); // set http and https proxy
+    // console.log(status);
+    // if (status) {
+    //   message.success('测试成功，ip有效！');
+    // } else {
+    //   message.error('测试失败，ip无效！');
+    // }
+
+    // await osProxy.closeProxy();
   }
 
   async function testAllIps() {
@@ -195,6 +201,20 @@ const App: React.FC = () => {
     }
   }
 
+  async function handleProxyButtonClick() {
+    setProxyLoading(true);
+    if(!sysProxy) {
+      await osProxy.setProxy('221.225.184.86', 3128);
+      message.success("系统代理已打开");
+      setSysProxy(true);
+    } else {
+      await osProxy.closeProxy();
+      message.info("系统代理已关闭");
+      setSysProxy(false);
+    }
+    setProxyLoading(false);
+  }
+
   return (
     <div className={styles.app}>
       <div className={styles.header}>
@@ -240,6 +260,21 @@ const App: React.FC = () => {
             }}
           />
         </Tooltip>
+
+        <div className={styles.header_right}>
+          <Tooltip placement="bottom" title="系统代理开关">
+            <Button
+              className={styles.proxy_button}
+              type="primary"
+              shape="circle"
+              // icon={<PauseOutlined />}
+              icon={(sysProxy)?<PauseOutlined />:<CaretRightOutlined />}
+              loading={proxyLoading}
+              style={{background: (sysProxy)?"red":"gray"}}
+              onClick={async () => { handleProxyButtonClick() }}
+            />
+          </Tooltip>
+        </div>
 
       </div>
       <List
