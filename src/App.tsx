@@ -175,6 +175,8 @@ const App: React.FC = () => {
   }
 
   async function testAllIps() {
+    console.log("scan start");
+    console.log(ipData);
     let [...data] = ipData; //深拷贝
     let vaildNumber = 0;
     const shotNumber: number = data.length; //单次扫描的数量
@@ -200,11 +202,20 @@ const App: React.FC = () => {
         }
         data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
       }
-      // setIpData(data);
     }
     data.sort((x, y) => {
       return y.conRate - x.conRate;
     });
+    //5次后删除连通率低于0.2的节点
+    if(scanTimes === 2) {
+      console.log("开始删除连通率较低的节点");
+      for(let i = 0; i < data.length; i++) {
+        if(data[i].conRate <= 20) {
+          data.splice(i, data.length - i);
+          break;
+        }
+      }
+    }
     setIpData(data);
     console.log(data);
     setScanLoading(false);
@@ -232,8 +243,8 @@ const App: React.FC = () => {
       if (!listen) {
         setListen(true);
         resetScanTimes();
-        testAllIps();
-        setTimer(setInterval(testAllIps, 30000)); //20秒一次
+        await testAllIps();
+        setTimer(setInterval(async ()=>{ await testAllIps(); }, 30000)); //20秒一次
         message.info("持续监测已打开");
       } else {
         setListen(false);
