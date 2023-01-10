@@ -84,15 +84,37 @@ const App: React.FC = () => {
     }
   }
 
+  async function requestBoySaveProxyList() {
+    try {
+      const response = await axios({
+        url: `http://proxy.boysave.com/all/`,
+        method: 'get',
+        timeout: 5000,
+      });
+      console.log(response);
+      let json = response.data;
+      let data = []
+      for(let i = 0; i < json.length; i++) {
+        data.push(json[i].proxy);
+      }
+      return data;
+    } catch (err) {
+      console.log(err);
+      return [];
+    }
+  }
+
   async function getData() {
     let promiseArray = [];
     let data: Array<string> = [];
     promiseArray.push(requestProxyip());
-    promiseArray.push(requestGithubip());
+    // promiseArray.push(requestGithubip());
+    // promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
       data = data.concat(resArr[i]);
     }
+    data = Array.from(new Set(data)); //去重
     console.log(data);
     let dataArray: Array<DataType> = [];
     for (let i = 0; i < data.length; i++) {
@@ -186,12 +208,21 @@ const App: React.FC = () => {
     setIpData(data);
     console.log(data);
     setScanLoading(false);
-    console.log('共检出' + vaildNumber + "个有效节点");
+    message.success('共检出' + vaildNumber + "个有效节点");
   }
 
   async function handleListItemClick(item: DataType) {
     clipboard.writeText(item.ip + ":" + item.port);
     message.success(item.ip + ":" + item.port + " 已复制");
+  }
+
+  async function resetScanTimes() {
+    let [...data] = ipData; //深拷贝
+    scanTimes = 0;
+    for (let i = 0; i < data.length; i++) {
+      data[i].conTimes = 0
+    }
+    setIpData(data);
   }
 
   async function handleListenButtonClick() {
@@ -200,7 +231,7 @@ const App: React.FC = () => {
     } else {
       if (!listen) {
         setListen(true);
-        // scanTimes = 0;
+        resetScanTimes();
         testAllIps();
         setTimer(setInterval(testAllIps, 30000)); //20秒一次
         message.info("持续监测已打开");
