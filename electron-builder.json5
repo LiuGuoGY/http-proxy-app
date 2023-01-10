@@ -27,7 +27,7 @@
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
-    deleteAppDataOnUninstall: false,
+    deleteAppDataOnUninstall: true,
   },
   mac: {
     target: ["dmg"],
@@ -38,4 +38,13 @@
     target: ["AppImage", "deb"],
     artifactName: "${productName}-Linux-${version}.${ext}",
   },
+  "extraResources": [
+    {
+      "from": "node_modules/regedit/vbs",
+      "to": "regedit/vbs",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ]
 }

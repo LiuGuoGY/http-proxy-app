@@ -1,11 +1,12 @@
 import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
-const { clipboard } = require('@electron/remote')
+const { app, clipboard } = require('@electron/remote')
 import axios from 'axios';
 import { List, Tag, Button, message, Tooltip, Progress, Checkbox, Modal } from "antd";
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { ReloadOutlined, CheckOutlined, BugOutlined, PauseOutlined, CaretRightOutlined } from '@ant-design/icons';
 const osProxy = require('cross-os-proxy');
+const regedit = require('regedit');
 
 let scanTimes: number = 0;
 
@@ -16,6 +17,7 @@ message.config({
   duration: 2,
   maxCount: 1,
 });
+regedit.setExternalVBSLocation('resources/regedit/vbs');
 
 interface DataType {
   idx: number;      //唯一序号
