@@ -94,7 +94,7 @@ const App: React.FC = () => {
       console.log(response);
       let json = response.data;
       let data = []
-      for(let i = 0; i < json.length; i++) {
+      for (let i = 0; i < json.length; i++) {
         data.push(json[i].proxy);
       }
       return data;
@@ -107,8 +107,8 @@ const App: React.FC = () => {
   async function getData() {
     let promiseArray = [];
     let data: Array<string> = [];
-    promiseArray.push(requestProxyip());
-    // promiseArray.push(requestGithubip());
+    // promiseArray.push(requestProxyip());
+    promiseArray.push(requestGithubip());
     // promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
@@ -207,10 +207,10 @@ const App: React.FC = () => {
       return y.conRate - x.conRate;
     });
     //5次后删除连通率低于0.2的节点
-    if(scanTimes === 2) {
+    if (scanTimes === 2) {
       console.log("开始删除连通率较低的节点");
-      for(let i = 0; i < data.length; i++) {
-        if(data[i].conRate <= 20) {
+      for (let i = 0; i < data.length; i++) {
+        if (data[i].conRate <= 20) {
           data.splice(i, data.length - i);
           break;
         }
@@ -237,33 +237,35 @@ const App: React.FC = () => {
   }
 
   async function handleListenButtonClick() {
-    if(ipData.length <= 0) {
-      message.error("请先点击左侧获取节点按钮");
-    } else {
-      if (!listen) {
+
+    if (!listen) {
+      if (ipData.length <= 0) {
+        message.error("请先点击左侧获取节点按钮");
+      } else {
         setListen(true);
         resetScanTimes();
-        await testAllIps();
-        setTimer(setInterval(async ()=>{ await testAllIps(); }, 30000)); //20秒一次
         message.info("持续监测已打开");
-      } else {
-        setListen(false);
-        clearInterval(timer);
-        message.info("持续监测已关闭");
+        await testAllIps();
+        setTimer(setInterval(async () => { await testAllIps(); }, 30000)); //20秒一次
       }
+    } else {
+      setListen(false);
+      clearInterval(timer);
+      message.info("持续监测已关闭");
     }
+
   }
 
   async function handleProxyButtonClick() {
     let haveSelected = false;
     let idx = -1;
-    for(let i = 0; i < ipData.length; i++) {
-      if(ipData[i].select) {
+    for (let i = 0; i < ipData.length; i++) {
+      if (ipData[i].select) {
         haveSelected = true;
         idx = i;
       }
     }
-    if(haveSelected) {
+    if (haveSelected) {
       setProxyLoading(true);
       try {
         if (!sysProxy) {
@@ -276,7 +278,7 @@ const App: React.FC = () => {
           message.info("系统代理已关闭");
           setSysProxy(false);
         }
-      } catch(e) {
+      } catch (e) {
         Modal.error({
           title: '出错了',
           content: "" + e,
@@ -291,8 +293,8 @@ const App: React.FC = () => {
 
   async function onProxySelectChange(id: number, e: CheckboxChangeEvent) {
     let [...data] = ipData; //深拷贝
-    for(let i = 0; i < data.length; i++) {
-      if(data[i].idx == id) {
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].idx == id) {
         data[i].select = e.target.checked;
       } else {
         data[i].select = false;
@@ -348,7 +350,7 @@ const App: React.FC = () => {
         </Tooltip> */}
 
         <div className={styles.header_right}>
-          <Tooltip placement="bottom" title={(sysProxy?"系统代理已打开":"系统代理已关闭")}>
+          <Tooltip placement="bottom" title={(sysProxy ? "系统代理已打开" : "系统代理已关闭")}>
             <Button
               className={styles.proxy_button}
               type="primary"
@@ -375,7 +377,7 @@ const App: React.FC = () => {
               </div>
               <p className={styles.list_ip} onClick={() => { handleListItemClick(item) }}>{item.ip + ":" + item.port}</p>
               <div className={styles.list_item_right}>
-                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e)=>{onProxySelectChange(item.idx, e)}}></Checkbox>
+                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e) => { onProxySelectChange(item.idx, e) }}></Checkbox>
               </div>
             </div>
           </List.Item>
