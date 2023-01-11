@@ -1,6 +1,7 @@
 * {
   user-select: none;
 }
+
 .app {
   text-align: center;
   .header {
@@ -9,19 +10,24 @@
     width: 100%;
     height: 50px;
     align-items: center;
+
     .refresh_button {
       margin-left: 20px;
     }
+
     .test_button {
       margin-left: 20px;
     }
+
     .debug_button {
       margin-left: 20px;
       background: #F2610E;
     }
+
     .header_right {
       flex-grow: 1;
       display: flex;
+
       .proxy_button {
         // background: #F2610E;
         margin-right: 20px;
@@ -30,36 +36,47 @@
     }
 
   }
-  .list_item {
-    height: 40px;
-    .list_item_content {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      width: 100%;
-      .list_state {
-        width: 40px;
+
+  .list {
+
+    .list_item {
+      height: 40px;
+
+      .list_item_content {
         display: flex;
         flex-direction: row;
-        .list_progress {
-          margin-left: 10px;
-        }
-      }
-      .list_ip {
-        font-size: 15px;
-        width: 160px;
-        text-align: left;
-      }
-      .list_item_right {
-        flex-grow: 1;
-        display: flex;
         align-items: center;
-        .list_select_box {
-          margin-right: 20px;
-          margin-left: auto;
+        width: 100%;
+
+        .list_state {
+          width: 40px;
+          display: flex;
+          flex-direction: row;
+
+          .list_progress {
+            margin-left: 10px;
+          }
+        }
+
+        .list_ip {
+          font-size: 15px;
+          width: 160px;
+          text-align: left;
+        }
+
+        .list_item_right {
+          flex-grow: 1;
+          display: flex;
+          align-items: center;
+
+          .list_select_box {
+            margin-right: 20px;
+            margin-left: auto;
+          }
         }
       }
-    }
 
+    }
   }
+
 }

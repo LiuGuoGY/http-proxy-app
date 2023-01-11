@@ -37,6 +37,8 @@
     "@electron/remote": "^2.0.9",
     "antd": "^5.1.0",
     "axios": "^0.27.2",
-    "cross-os-proxy": "^2.0.0"
+    "cross-os-proxy": "^2.0.0",
+    "immer": "^9.0.17",
+    "use-immer": "^0.8.1"
   }
 }

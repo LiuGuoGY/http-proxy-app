@@ -1,5 +1,6 @@
 import React, { Component, useEffect, useState } from 'react';
 import styles from 'styles/app.module.scss';
+import { useImmer } from "use-immer";
 const { app, clipboard } = require('@electron/remote')
 import axios from 'axios';
 import { List, Tag, Button, message, Tooltip, Progress, Checkbox, Modal } from "antd";
@@ -9,6 +10,7 @@ const osProxy = require('cross-os-proxy');
 const regedit = require('regedit');
 
 let scanTimes: number = 0;
+let timer: any = null;
 
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
@@ -31,16 +33,13 @@ interface DataType {
 }
 
 const App: React.FC = () => {
-  const [ipData, setIpData] = useState<DataType[]>([]);
+  const [ipData, updateIpData] = useImmer<DataType[]>([]);
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [scanLoading, setScanLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
   const [sysProxy, setSysProxy] = useState<boolean>(false);
   const [proxyLoading, setProxyLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<NodeJS.Timer>();
-
-
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
     try {
@@ -94,7 +93,7 @@ const App: React.FC = () => {
       console.log(response);
       let json = response.data;
       let data = []
-      for(let i = 0; i < json.length; i++) {
+      for (let i = 0; i < json.length; i++) {
         data.push(json[i].proxy);
       }
       return data;
@@ -107,9 +106,9 @@ const App: React.FC = () => {
   async function getData() {
     let promiseArray = [];
     let data: Array<string> = [];
-    promiseArray.push(requestProxyip());
+    // promiseArray.push(requestProxyip());
     // promiseArray.push(requestGithubip());
-    // promiseArray.push(requestBoySaveProxyList());
+    promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
       data = data.concat(resArr[i]);
@@ -130,7 +129,7 @@ const App: React.FC = () => {
         idx: i,
       })
     }
-    setIpData(dataArray);
+    updateIpData(dataArray);
     console.log(dataArray);
     message.success('共获取到' + data.length + "个节点");
   }
@@ -147,7 +146,7 @@ const App: React.FC = () => {
           port: port
         }
       });
-      console.log(response);
+      // console.log(response);
       if (response.status === 204) {
         return true;
       } else {
@@ -175,50 +174,73 @@ const App: React.FC = () => {
   }
 
   async function testAllIps() {
-    console.log("scan start");
-    console.log(ipData);
-    let [...data] = ipData; //深拷贝
+    // let [...data] = ipData; //深拷贝
     let vaildNumber = 0;
-    const shotNumber: number = data.length; //单次扫描的数量
+    let shotNumber: number = ipData.length; //单次扫描的数量
+    console.log(ipData.length);
+    console.log(ipData);
     scanTimes++;
     setScanLoading(true);
-    for (let y = 0; y < data.length; y += shotNumber) {
+
+    for (let y = 0; y < ipData.length; y += shotNumber) {
       let promiseArray = []
       for (let i = y; i < y + shotNumber; i++) {
-        if (i >= data.length) break;
-        promiseArray.push(testIp(data[i].ip, Number(data[i].port)));
+        if (i >= ipData.length) break;
+        promiseArray.push(testIp(ipData[i].ip, Number(ipData[i].port)));
       }
       let resArr = await Promise.all(promiseArray);
-      for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
-        // console.log("i:" + i + " y:" + y);
-        if (resArr[z]) {
-          data[i].state = "有效";
-          data[i].stateColor = "green";
-          vaildNumber++;
-          data[i].conTimes++;
-        } else {
-          data[i].state = "无效";
-          data[i].stateColor = "red";
+      updateIpData((data)=>{
+        for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
+          if (resArr[z]) {
+            data[i].state = "有效";
+            data[i].stateColor = "green";
+            data[i].conTimes++;
+            vaildNumber++;
+          } else {
+            data[i].state = "无效";
+            data[i].stateColor = "red";
+          }
+          data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
         }
-        data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
-      }
+        data.sort((x, y) => {
+          return y.conRate - x.conRate;
+        });
+      })
+
+      // for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
+      //   if (resArr[z]) {
+      //     updateIpData((data) => {
+      //       data[i].state = "有效";
+      //       data[i].stateColor = "green";
+      //       data[i].conTimes++;
+      //       data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
+      //       // console.log(`conTimes: ${data[i].conTimes} ; conRate: ${data[i].conRate}%`)
+      //     })
+      //     vaildNumber++;
+      //   } else {
+      //     updateIpData((data) => {
+      //       data[i].state = "无效";
+      //       data[i].stateColor = "red";
+      //       data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
+      //     })
+      //   }
+      // }
     }
-    data.sort((x, y) => {
-      return y.conRate - x.conRate;
-    });
+    updateIpData((data) => {
+      data.sort((x, y) => {
+        return y.conRate - x.conRate;
+      });
+    })
+
     //5次后删除连通率低于0.2的节点
-    if(scanTimes === 2) {
+    if (scanTimes === 1) {
       console.log("开始删除连通率较低的节点");
-      for(let i = 0; i < data.length; i++) {
-        if(data[i].conRate <= 20) {
-          data.splice(i, data.length - i);
-          break;
-        }
-      }
+      console.log(ipData)
+      console.log(ipData.filter((d)=>d.conRate > 20));
+      updateIpData(ipData.filter((d)=>d.conRate > 20));
     }
-    setIpData(data);
-    console.log(data);
     setScanLoading(false);
+    console.log("扫描数: " + scanTimes);
     message.success('共检出' + vaildNumber + "个有效节点");
   }
 
@@ -228,42 +250,43 @@ const App: React.FC = () => {
   }
 
   async function resetScanTimes() {
-    let [...data] = ipData; //深拷贝
     scanTimes = 0;
-    for (let i = 0; i < data.length; i++) {
-      data[i].conTimes = 0
+    for (let i = 0; i < ipData.length; i++) {
+      updateIpData((data) => {
+        data[i].conTimes = 0;
+      });
     }
-    setIpData(data);
   }
 
   async function handleListenButtonClick() {
-    if(ipData.length <= 0) {
-      message.error("请先点击左侧获取节点按钮");
-    } else {
-      if (!listen) {
-        setListen(true);
-        resetScanTimes();
-        await testAllIps();
-        setTimer(setInterval(async ()=>{ await testAllIps(); }, 30000)); //20秒一次
-        message.info("持续监测已打开");
+    if (!listen) {
+      if (ipData.length <= 0) {
+        message.error("请先点击左侧获取节点按钮");
       } else {
-        setListen(false);
-        clearInterval(timer);
-        message.info("持续监测已关闭");
+        setListen(true);
+        message.info("持续监测已打开");
+        resetScanTimes();
+        testAllIps();
+        timer = setInterval(testAllIps, 20000); //20秒一次
       }
+    } else {
+      setListen(false);
+      clearInterval(timer);
+      resetScanTimes();
+      message.info("持续监测已关闭");
     }
   }
 
   async function handleProxyButtonClick() {
     let haveSelected = false;
     let idx = -1;
-    for(let i = 0; i < ipData.length; i++) {
-      if(ipData[i].select) {
+    for (let i = 0; i < ipData.length; i++) {
+      if (ipData[i].select) {
         haveSelected = true;
         idx = i;
       }
     }
-    if(haveSelected) {
+    if (haveSelected) {
       setProxyLoading(true);
       try {
         if (!sysProxy) {
@@ -276,7 +299,7 @@ const App: React.FC = () => {
           message.info("系统代理已关闭");
           setSysProxy(false);
         }
-      } catch(e) {
+      } catch (e) {
         Modal.error({
           title: '出错了',
           content: "" + e,
@@ -290,15 +313,18 @@ const App: React.FC = () => {
   }
 
   async function onProxySelectChange(id: number, e: CheckboxChangeEvent) {
-    let [...data] = ipData; //深拷贝
-    for(let i = 0; i < data.length; i++) {
-      if(data[i].idx == id) {
-        data[i].select = e.target.checked;
+    // let [...data] = ipData; //深拷贝
+    for (let i = 0; i < ipData.length; i++) {
+      if (ipData[i].idx == id) {
+        updateIpData((data) => {
+          data[i].select = e.target.checked;
+        });
       } else {
-        data[i].select = false;
+        updateIpData((data) => {
+          data[i].select = false;
+        });
       }
     }
-    setIpData(data);
   }
 
   return (
@@ -348,7 +374,7 @@ const App: React.FC = () => {
         </Tooltip> */}
 
         <div className={styles.header_right}>
-          <Tooltip placement="bottom" title={(sysProxy?"系统代理已打开":"系统代理已关闭")}>
+          <Tooltip placement="bottom" title={(sysProxy ? "系统代理已打开" : "系统代理已关闭")}>
             <Button
               className={styles.proxy_button}
               type="primary"
@@ -364,6 +390,7 @@ const App: React.FC = () => {
 
       </div>
       <List
+        className={styles.list}
         itemLayout="horizontal"
         dataSource={ipData}
         size="small"
@@ -375,7 +402,7 @@ const App: React.FC = () => {
               </div>
               <p className={styles.list_ip} onClick={() => { handleListItemClick(item) }}>{item.ip + ":" + item.port}</p>
               <div className={styles.list_item_right}>
-                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e)=>{onProxySelectChange(item.idx, e)}}></Checkbox>
+                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e) => { onProxySelectChange(item.idx, e) }}></Checkbox>
               </div>
             </div>
           </List.Item>
