@@ -9,6 +9,8 @@ const osProxy = require('cross-os-proxy');
 const regedit = require('regedit');
 
 let scanTimes: number = 0;
+let timer: any = null;
+let ipData: DataType[] = [];
 
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
@@ -31,14 +33,18 @@ interface DataType {
 }
 
 const App: React.FC = () => {
-  const [ipData, setIpData] = useState<DataType[]>([]);
+  const [ipData2, setIpData2] = useState<DataType[]>([]);
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [scanLoading, setScanLoading] = useState<boolean>(false);
   const [debugLoading, setDebugLoading] = useState<boolean>(false);
   const [listen, setListen] = useState<boolean>(false);
   const [sysProxy, setSysProxy] = useState<boolean>(false);
   const [proxyLoading, setProxyLoading] = useState<boolean>(false);
-  const [timer, setTimer] = useState<NodeJS.Timer>();
+
+  function setIpData(data:DataType[]) {
+    ipData = [...data];
+    setIpData2(data);
+  }
 
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
@@ -108,8 +114,8 @@ const App: React.FC = () => {
     let promiseArray = [];
     let data: Array<string> = [];
     // promiseArray.push(requestProxyip());
-    promiseArray.push(requestGithubip());
-    // promiseArray.push(requestBoySaveProxyList());
+    // promiseArray.push(requestGithubip());
+    promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
       data = data.concat(resArr[i]);
@@ -147,8 +153,8 @@ const App: React.FC = () => {
           port: port
         }
       });
-      console.log(response);
       if (response.status === 204) {
+        console.log(response);
         return true;
       } else {
         return false;
@@ -175,9 +181,7 @@ const App: React.FC = () => {
   }
 
   async function testAllIps() {
-    console.log("scan start");
-    console.log(ipData);
-    let [...data] = ipData; //深拷贝
+    let data = [...ipData]; //深拷贝
     let vaildNumber = 0;
     const shotNumber: number = data.length; //单次扫描的数量
     scanTimes++;
@@ -206,18 +210,17 @@ const App: React.FC = () => {
     data.sort((x, y) => {
       return y.conRate - x.conRate;
     });
+
     //5次后删除连通率低于0.2的节点
-    if (scanTimes === 2) {
-      console.log("开始删除连通率较低的节点");
-      for (let i = 0; i < data.length; i++) {
-        if (data[i].conRate <= 20) {
-          data.splice(i, data.length - i);
-          break;
-        }
+    if (scanTimes >= 5) {
+      data = data.filter((d)=>d.conRate>20);
+
+      //5次后自动选择最佳节点
+      if(data.filter((d)=>d.select).length <= 0 && data[0].conRate >= 80) {
+        data[0].select = true;
       }
     }
     setIpData(data);
-    console.log(data);
     setScanLoading(false);
     message.success('共检出' + vaildNumber + "个有效节点");
   }
@@ -237,7 +240,6 @@ const App: React.FC = () => {
   }
 
   async function handleListenButtonClick() {
-
     if (!listen) {
       if (ipData.length <= 0) {
         message.error("请先点击左侧获取节点按钮");
@@ -245,15 +247,14 @@ const App: React.FC = () => {
         setListen(true);
         resetScanTimes();
         message.info("持续监测已打开");
-        await testAllIps();
-        setTimer(setInterval(async () => { await testAllIps(); }, 30000)); //20秒一次
+        testAllIps();
+        timer = setInterval(testAllIps, 20000); //20秒一次
       }
     } else {
       setListen(false);
       clearInterval(timer);
       message.info("持续监测已关闭");
     }
-
   }
 
   async function handleProxyButtonClick() {
