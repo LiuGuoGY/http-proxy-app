@@ -41,11 +41,10 @@ const App: React.FC = () => {
   const [sysProxy, setSysProxy] = useState<boolean>(false);
   const [proxyLoading, setProxyLoading] = useState<boolean>(false);
 
-  function setIpData(data:DataType[]) {
+  function setIpData(data: DataType[]) {
     ipData = [...data];
     setIpData2(data);
   }
-
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -165,20 +164,20 @@ const App: React.FC = () => {
     }
   }
 
-  async function testLocal() {
-    // let status = await testIp("127.0.0.1", 7890);
-    // let status = await testIp("180.158.23.175", 3080);
-    // let status = await testIp("176.192.70.58", 8016);
-    // await osProxy.setProxy('221.225.184.86', 3128); // set http and https proxy
-    // console.log(status);
-    // if (status) {
-    //   message.success('测试成功，ip有效！');
-    // } else {
-    //   message.error('测试失败，ip无效！');
-    // }
+  // async function testLocal() {
+  // let status = await testIp("127.0.0.1", 7890);
+  // let status = await testIp("180.158.23.175", 3080);
+  // let status = await testIp("176.192.70.58", 8016);
+  // await osProxy.setProxy('221.225.184.86', 3128); // set http and https proxy
+  // console.log(status);
+  // if (status) {
+  //   message.success('测试成功，ip有效！');
+  // } else {
+  //   message.error('测试失败，ip无效！');
+  // }
 
-    // await osProxy.closeProxy();
-  }
+  // await osProxy.closeProxy();
+  // }
 
   async function testAllIps() {
     let data = [...ipData]; //深拷贝
@@ -212,11 +211,13 @@ const App: React.FC = () => {
     });
 
     //5次后删除连通率低于0.2的节点
-    if (scanTimes >= 5) {
-      data = data.filter((d)=>d.conRate>20);
+    if (scanTimes >= 5 && !sysProxy) {
+      data = data.filter((d) => d.conRate > 20);
+    }
 
+    if (scanTimes === 5) {
       //5次后自动选择最佳节点
-      if(data.filter((d)=>d.select).length <= 0 && data[0].conRate >= 80) {
+      if (data.filter((d) => d.select).length <= 0 && data[0].conRate >= 80) {
         data[0].select = true;
       }
     }
@@ -258,37 +259,31 @@ const App: React.FC = () => {
   }
 
   async function handleProxyButtonClick() {
-    let haveSelected = false;
-    let idx = -1;
-    for (let i = 0; i < ipData.length; i++) {
-      if (ipData[i].select) {
-        haveSelected = true;
-        idx = i;
-      }
-    }
-    if (haveSelected) {
-      setProxyLoading(true);
-      try {
-        if (!sysProxy) {
-          console.log("ip: " + ipData[idx].ip + " port: " + ipData[idx].port);
-          await osProxy.setProxy(ipData[idx].ip, ipData[idx].port);
+    try {
+      if (!sysProxy) {
+        let selArray = ipData.filter((d) => d.select);
+        if (selArray.length > 0) {
+          setProxyLoading(true);
+          console.log("ip: " + selArray[0].ip + " port: " + selArray[0].port);
+          await osProxy.setProxy(selArray[0].ip, selArray[0].port);
           message.success("系统代理已打开");
           setSysProxy(true);
+          setProxyLoading(false);
         } else {
-          await osProxy.closeProxy();
-          message.info("系统代理已关闭");
-          setSysProxy(false);
+          message.error("请勾选列表中的节点");
         }
-      } catch (e) {
-        Modal.error({
-          title: '出错了',
-          content: "" + e,
-        });
+      } else {
+        setProxyLoading(true);
+        await osProxy.closeProxy();
+        message.info("系统代理已关闭");
+        setSysProxy(false);
+        setProxyLoading(false);
       }
-
-      setProxyLoading(false);
-    } else {
-      message.error("请勾选列表中的节点");
+    } catch (e) {
+      Modal.error({
+        title: '出错了',
+        content: "" + e,
+      });
     }
   }
 
