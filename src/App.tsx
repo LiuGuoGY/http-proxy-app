@@ -8,9 +8,8 @@ import { ReloadOutlined, CheckOutlined, BugOutlined, PauseOutlined, CaretRightOu
 const osProxy = require('cross-os-proxy');
 const regedit = require('regedit');
 
-let scanTimes: number = 0;
 let timer: any = null;
-let ipData: DataType[] = [];
+// let ipData: DataType[] = [];
 
 //使用nodejs环境
 axios.defaults.adapter = require('axios/lib/adapters/http');
@@ -32,19 +31,8 @@ interface DataType {
   select: boolean,
 }
 
-const App: React.FC = () => {
-  const [ipData2, setIpData2] = useState<DataType[]>([]);
+const RefreshButton: React.FC<any> = (props) => {
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
-  const [scanLoading, setScanLoading] = useState<boolean>(false);
-  const [debugLoading, setDebugLoading] = useState<boolean>(false);
-  const [listen, setListen] = useState<boolean>(false);
-  const [sysProxy, setSysProxy] = useState<boolean>(false);
-  const [proxyLoading, setProxyLoading] = useState<boolean>(false);
-
-  function setIpData(data: DataType[]) {
-    ipData = [...data];
-    setIpData2(data);
-  }
 
   //返回xxx.xxx.xxx.xxx:pppp的字符串数组
   async function requestProxyip() {
@@ -54,6 +42,7 @@ const App: React.FC = () => {
         method: 'get',
         timeout: 5000,
       });
+      console.log(`https://api.proxyip.info/api.php?key=6666&method=all`);
       console.log(response);
       let data = response.data.split("\r\n");
       if (data[0] === "Times used up") {
@@ -71,14 +60,11 @@ const App: React.FC = () => {
   async function requestGithubip() {
     try {
       const response = await axios({
-        url: "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+        url: "https://ghproxy.com/https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
         method: 'get',
         timeout: 5000,
-        // proxy: {
-        //   host: "127.0.0.1",
-        //   port: 7890
-        // }
       });
+      console.log(`https://ghproxy.com/https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt`);
       console.log(response);
       let data = response.data.split("\n");
       data.pop();
@@ -96,6 +82,7 @@ const App: React.FC = () => {
         method: 'get',
         timeout: 5000,
       });
+      console.log(`http://proxy.boysave.com/all/`);
       console.log(response);
       let json = response.data;
       let data = []
@@ -109,11 +96,11 @@ const App: React.FC = () => {
     }
   }
 
-  async function getData() {
+  async function getIpData() {
     let promiseArray = [];
     let data: Array<string> = [];
-    // promiseArray.push(requestProxyip());
-    // promiseArray.push(requestGithubip());
+    promiseArray.push(requestProxyip());
+    promiseArray.push(requestGithubip());
     promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
@@ -135,9 +122,14 @@ const App: React.FC = () => {
         idx: i,
       })
     }
-    setIpData(dataArray);
+
+    //数据请求成功回调
+    props.onDataReady(dataArray);
+
     console.log(dataArray);
     message.success('共获取到' + data.length + "个节点");
+
+    return dataArray;
   }
 
   async function testIp(ip: string, port: number) {
@@ -164,108 +156,80 @@ const App: React.FC = () => {
     }
   }
 
-  // async function testLocal() {
-  // let status = await testIp("127.0.0.1", 7890);
-  // let status = await testIp("180.158.23.175", 3080);
-  // let status = await testIp("176.192.70.58", 8016);
-  // await osProxy.setProxy('221.225.184.86', 3128); // set http and https proxy
-  // console.log(status);
-  // if (status) {
-  //   message.success('测试成功，ip有效！');
-  // } else {
-  //   message.error('测试失败，ip无效！');
-  // }
-
-  // await osProxy.closeProxy();
-  // }
-
-  async function testAllIps() {
-    let data = [...ipData]; //深拷贝
+  async function testAllIps(data:DataType[]) {
+    let scanTimes:number = 0;
     let vaildNumber = 0;
-    const shotNumber: number = data.length; //单次扫描的数量
-    scanTimes++;
-    setScanLoading(true);
-    for (let y = 0; y < data.length; y += shotNumber) {
-      let promiseArray = []
-      for (let i = y; i < y + shotNumber; i++) {
-        if (i >= data.length) break;
-        promiseArray.push(testIp(data[i].ip, Number(data[i].port)));
-      }
-      let resArr = await Promise.all(promiseArray);
-      for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
-        // console.log("i:" + i + " y:" + y);
-        if (resArr[z]) {
-          data[i].state = "有效";
-          data[i].stateColor = "green";
-          vaildNumber++;
-          data[i].conTimes++;
-        } else {
-          data[i].state = "无效";
-          data[i].stateColor = "red";
+    let shotNumber: number = (data.length < 500)?data.length:500; //单次扫描的数量
+    for(let zz = 0; zz < 5; zz++) {
+      scanTimes++;
+      for (let y = 0; y < data.length; y += shotNumber) {
+        let promiseArray = []
+        for (let i = y; i < y + shotNumber; i++) {
+          if (i >= data.length) break;
+          promiseArray.push(testIp(data[i].ip, Number(data[i].port)));
         }
-        data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
+        let resArr = await Promise.all(promiseArray);
+        for (let i = y, z = 0; i < y + resArr.length; i++, z++) {
+          if (resArr[z]) {
+            data[i].state = "有效";
+            data[i].stateColor = "green";
+            vaildNumber++;
+            data[i].conTimes++;
+          } else {
+            data[i].state = "无效";
+            data[i].stateColor = "red";
+          }
+          data[i].conRate = Math.round(data[i].conTimes / scanTimes * 100);
+        }
       }
+
     }
+    data = data.filter((d) => d.conRate > 80);
     data.sort((x, y) => {
       return y.conRate - x.conRate;
     });
+    console.log(data);
 
-    //5次后删除连通率低于0.2的节点
-    if (scanTimes >= 5 && !sysProxy) {
-      data = data.filter((d) => d.conRate > 20);
-    }
-
-    if (scanTimes === 5) {
-      //5次后自动选择最佳节点
-      if (data.filter((d) => d.select).length <= 0 && data[0].conRate >= 80) {
-        data[0].select = true;
-      }
-    }
-    setIpData(data);
-    setScanLoading(false);
-    message.success('共检出' + vaildNumber + "个有效节点");
+    //数据请求成功回调
+    props.onDataReady(data);
+    message.success('共检出' + data.length + "个良好节点");
   }
 
-  async function handleListItemClick(item: DataType) {
-    clipboard.writeText(item.ip + ":" + item.port);
-    message.success(item.ip + ":" + item.port + " 已复制");
-  }
+  return (
+    <div>
+      <Tooltip placement="bottom" title="获取节点列表">
+        <Button
+          className={styles.refresh_button}
+          type="primary"
+          shape="circle"
+          icon={<ReloadOutlined />}
+          loading={refreshLoading}
+          onClick={async () => {
+            setRefreshLoading(true);
+            let ipData = await getIpData();
+            await testAllIps(ipData);
+            setRefreshLoading(false);
+          }}
+        />
+      </Tooltip>
+    </div>
+  )
+}
 
-  async function resetScanTimes() {
-    let [...data] = ipData; //深拷贝
-    scanTimes = 0;
-    for (let i = 0; i < data.length; i++) {
-      data[i].conTimes = 0
-    }
-    setIpData(data);
-  }
+const ProxyButton: React.FC<any> = (props) => {
 
-  async function handleListenButtonClick() {
-    if (!listen) {
-      if (ipData.length <= 0) {
-        message.error("请先点击左侧获取节点按钮");
-      } else {
-        setListen(true);
-        resetScanTimes();
-        message.info("持续监测已打开");
-        testAllIps();
-        timer = setInterval(testAllIps, 20000); //20秒一次
-      }
-    } else {
-      setListen(false);
-      clearInterval(timer);
-      message.info("持续监测已关闭");
-    }
-  }
+  const [sysProxy, setSysProxy] = useState<boolean>(false);
+  const [proxyLoading, setProxyLoading] = useState<boolean>(false);
 
   async function handleProxyButtonClick() {
     try {
       if (!sysProxy) {
-        let selArray = ipData.filter((d) => d.select);
-        if (selArray.length > 0) {
+        if (props.ipData) {
+          let ip = props.ipData.ip;
+          let port = props.ipData.port;
           setProxyLoading(true);
-          console.log("ip: " + selArray[0].ip + " port: " + selArray[0].port);
-          await osProxy.setProxy(selArray[0].ip, selArray[0].port);
+          console.log("ip: " + ip + " port: " + port);
+          await osProxy.setProxy(ip, port);
           message.success("系统代理已打开");
           setSysProxy(true);
           setProxyLoading(false);
@@ -287,11 +251,54 @@ const App: React.FC = () => {
     }
   }
 
+  return (
+    <div>
+      <Tooltip placement="bottom" title={(sysProxy ? "系统代理已打开" : "系统代理已关闭")}>
+        <Button
+          className={styles.proxy_button}
+          type="primary"
+          shape="circle"
+          // icon={<PauseOutlined />}
+          icon={(sysProxy) ? <PauseOutlined /> : <CaretRightOutlined />}
+          loading={proxyLoading}
+          style={{ background: (sysProxy) ? "red" : "gray" }}
+          onClick={async () => { handleProxyButtonClick() }}
+        />
+      </Tooltip>
+    </div>
+  )
+}
+
+const Menu: React.FC<any> = (props) => {
+
+  return (
+    <div className={styles.header}>
+      <RefreshButton onDataReady={props.onDataReady}></RefreshButton>
+      <div className={styles.header_right}>
+        <ProxyButton ipData={props.ipData}></ProxyButton>
+      </div>
+    </div>
+  )
+}
+
+const App: React.FC = () => {
+  const [ipData, setIpData] = useState<DataType[]>([]);
+  const [selIdx, setSelIdx] = useState<number>(-1);
+
+  async function handleListItemClick(item: DataType) {
+    clipboard.writeText(item.ip + ":" + item.port);
+    message.success(item.ip + ":" + item.port + " 已复制");
+  }
+
   async function onProxySelectChange(id: number, e: CheckboxChangeEvent) {
     let [...data] = ipData; //深拷贝
+    setSelIdx(-1);
     for (let i = 0; i < data.length; i++) {
       if (data[i].idx == id) {
         data[i].select = e.target.checked;
+        if(e.target.checked) {
+          setSelIdx(i);
+        }
       } else {
         data[i].select = false;
       }
@@ -299,67 +306,11 @@ const App: React.FC = () => {
     setIpData(data);
   }
 
+  //selectIp={}
   return (
     <div className={styles.app}>
       <div className={styles.header}>
-        <Tooltip placement="bottom" title="获取节点列表">
-          <Button
-            className={styles.refresh_button}
-            type="primary"
-            shape="circle"
-            icon={<ReloadOutlined />}
-            loading={refreshLoading}
-            onClick={async () => {
-              setRefreshLoading(true);
-              scanTimes = 0;
-              await getData();
-              setRefreshLoading(false);
-            }}
-          />
-        </Tooltip>
-
-        <Tooltip placement="bottom" title="持续监测所有节点">
-          <Button
-            className={styles.test_button}
-            type="primary"
-            shape="circle"
-            icon={<CheckOutlined />}
-            loading={scanLoading}
-            style={{ background: (listen) ? "green" : "gray" }}
-            onClick={() => { handleListenButtonClick() }}
-          />
-        </Tooltip>
-
-        {/* <Tooltip placement="bottom" title="本地测试">
-          <Button
-            className={styles.debug_button}
-            type="primary"
-            shape="circle"
-            icon={<BugOutlined />}
-            loading={debugLoading}
-            onClick={async () => {
-              setDebugLoading(true);
-              await testLocal();
-              setDebugLoading(false);
-            }}
-          />
-        </Tooltip> */}
-
-        <div className={styles.header_right}>
-          <Tooltip placement="bottom" title={(sysProxy ? "系统代理已打开" : "系统代理已关闭")}>
-            <Button
-              className={styles.proxy_button}
-              type="primary"
-              shape="circle"
-              // icon={<PauseOutlined />}
-              icon={(sysProxy) ? <PauseOutlined /> : <CaretRightOutlined />}
-              loading={proxyLoading}
-              style={{ background: (sysProxy) ? "red" : "gray" }}
-              onClick={async () => { handleProxyButtonClick() }}
-            />
-          </Tooltip>
-        </div>
-
+        <Menu onDataReady={(data: DataType[]) => { setIpData(data) }} ipData={(selIdx >= 0)?ipData[selIdx]:null}/>
       </div>
       <List
         itemLayout="horizontal"
@@ -373,7 +324,7 @@ const App: React.FC = () => {
               </div>
               <p className={styles.list_ip} onClick={() => { handleListItemClick(item) }}>{item.ip + ":" + item.port}</p>
               <div className={styles.list_item_right}>
-                <Checkbox className={styles.list_select_box} disabled={sysProxy} checked={item.select} onChange={(e) => { onProxySelectChange(item.idx, e) }}></Checkbox>
+                <Checkbox className={styles.list_select_box} checked={item.select} onChange={(e) => { onProxySelectChange(item.idx, e) }}></Checkbox>
               </div>
             </div>
           </List.Item>

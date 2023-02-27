@@ -20,8 +20,9 @@
       background: #F2610E;
     }
     .header_right {
-      flex-grow: 1;
+      // flex-grow: 1;
       display: flex;
+      margin-left: 20px;
       .proxy_button {
         // background: #F2610E;
         margin-right: 20px;
