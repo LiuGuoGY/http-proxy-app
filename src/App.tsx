@@ -96,12 +96,34 @@ const RefreshButton: React.FC<any> = (props) => {
     }
   }
 
+  // async function getProxyIps(url:string) {
+  //   try {
+  //     const response = await axios({
+  //       url: url,
+  //       method: 'get',
+  //       timeout: 5000,
+  //     });
+  //     console.log(response);
+  //     let data:any = []
+  //     if (typeof JSON.parse(response.data) == "object") {
+  //       JSON.parse(response.data)
+  //     } else {
+  //       data = response.data.split("\n");
+  //       data.pop();
+  //     }
+  //     return data;
+  //   } catch (err) {
+  //     console.log(err);
+  //     return [];
+  //   }
+  // }
+
   async function getIpData() {
     let promiseArray = [];
     let data: Array<string> = [];
-    promiseArray.push(requestProxyip());
+    // promiseArray.push(requestProxyip());
     promiseArray.push(requestGithubip());
-    promiseArray.push(requestBoySaveProxyList());
+    // promiseArray.push(requestBoySaveProxyList());
     let resArr = await Promise.all(promiseArray);
     for (let i = 0; i < resArr.length; i++) {
       data = data.concat(resArr[i]);
@@ -156,11 +178,11 @@ const RefreshButton: React.FC<any> = (props) => {
     }
   }
 
-  async function testAllIps(data:DataType[]) {
-    let scanTimes:number = 0;
+  async function testAllIps(data: DataType[]) {
+    let scanTimes: number = 0;
     let vaildNumber = 0;
-    let shotNumber: number = (data.length < 500)?data.length:500; //单次扫描的数量
-    for(let zz = 0; zz < 5; zz++) {
+    let shotNumber: number = (data.length < 500) ? data.length : 500; //单次扫描的数量
+    for (let zz = 0; zz < 5; zz++) {
       scanTimes++;
       for (let y = 0; y < data.length; y += shotNumber) {
         let promiseArray = []
@@ -296,7 +318,7 @@ const App: React.FC = () => {
     for (let i = 0; i < data.length; i++) {
       if (data[i].idx == id) {
         data[i].select = e.target.checked;
-        if(e.target.checked) {
+        if (e.target.checked) {
           setSelIdx(i);
         }
       } else {
@@ -310,7 +332,7 @@ const App: React.FC = () => {
   return (
     <div className={styles.app}>
       <div className={styles.header}>
-        <Menu onDataReady={(data: DataType[]) => { setIpData(data) }} ipData={(selIdx >= 0)?ipData[selIdx]:null}/>
+        <Menu onDataReady={(data: DataType[]) => { setIpData(data) }} ipData={(selIdx >= 0) ? ipData[selIdx] : null} />
       </div>
       <List
         itemLayout="horizontal"
